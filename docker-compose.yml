@@ -1,0 +1,89 @@
+version: '3.9'
+
+networks:
+  backend_network:
+    driver: bridge
+  frontend_network:
+    driver: bridge
+
+volumes:
+  redis_data: null
+  pg_data: null
+
+services:
+  client:
+    image: app_client
+    build:
+      context: ./client
+      target: development
+    container_name: app_client
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - PORT=${CLIENT_PORT}
+      - API_HOST=api
+    ports:
+      - ${CLIENT_PORT}:${CLIENT_PORT}
+    networks:
+      - frontend_network
+    volumes:
+      - './client:/home/node/app'
+    depends_on:
+      - api
+    command: npm run start
+
+  api:
+    image: app_api
+    build:
+      context: ./api
+      target: development
+    container_name: app_api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - PORT=${API_PORT}
+      - POSTGRES_HOST=postgres
+      - REDIS_HOST=redis
+      - CLIENT_HOST=client
+    ports:
+      - ${API_PORT}:${API_PORT}
+      - 9222:9222
+    networks:
+      - frontend_network
+      - backend_network
+    volumes:
+      - './api:/home/node/app'
+    depends_on:
+      - postgres
+      - redis
+    command: ./wait-for.sh postgres:${POSTGRES_PORT} -- npm run dev
+
+  postgres:
+    image: 'postgres:13.1-alpine'
+    container_name: 'postgres'
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - 'pg_data:/var/lib/postgresql/data:rw'
+    expose:
+      - '${POSTGRES_PORT}'
+    ports:
+      - '15432:${POSTGRES_PORT}'
+    networks:
+      - 'backend_network'
+    command: -p ${POSTGRES_PORT}
+
+  redis:
+    image: 'redis:6.2.0-alpine'
+    container_name: 'redis'
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - 'redis_data:/data'
+    expose:
+      - '${REDIS_PORT}'
+    ports:
+      - '16379:${REDIS_PORT}'
+    networks:
+      - 'backend_network'
+    command: --port ${REDIS_PORT} --requirepass ${REDIS_PASSWORD}

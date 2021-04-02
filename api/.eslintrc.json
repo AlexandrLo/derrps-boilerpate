@@ -1,0 +1,15 @@
+{
+	"extends": ["esnext", "esnext/style-guide", "node", "node/style-guide"],
+	"rules": {
+		"space-before-function-paren": [0],
+		"array-bracket-spacing": [0],
+		"arrow-parens": [0],
+		"template-curly-spacing": [0],
+		"curly": [0]
+	},
+	"settings": {
+		"import/resolver": {
+			"babel-module": {}
+		}
+	}
+}
